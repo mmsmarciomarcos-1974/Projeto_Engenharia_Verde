@@ -203,11 +203,4 @@ A análise empírica refuta a Hipótese Alternativa ($H_1$) [cite: 272] de que a
 2.  **Desempenho:** O Python Puro também foi **$3$ a $4$ vezes mais rápido**.
 3.  **Implicação para Engenharia Verde:** A escolha de uma ferramenta com maior nível de abstração (Pandas) não resultou em ganhos de eficiência para a tarefa específica de **leitura, armazenamento e iteração simples**[cite: 228]. Pelo contrário, o _overhead_ introduzido pelo Pandas (devido à sua complexidade interna, otimizada para manipulações e não apenas para leitura) gerou um custo energético significativamente maior, reforçando a importância da seleção de ferramentas adequadas para **software verde**[cite: 233].
 
----
-### 👥 Autores
 
-* **Caio Henrique dos Santos**
-* **Everton Cezar Gonçalves**
-* **João Pedro Guez de Oliveira**
-* **Marcio Marcos**
-* *Novembro de 2025*
