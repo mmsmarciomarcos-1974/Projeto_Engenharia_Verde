@@ -8,19 +8,19 @@ Este projeto realiza um estudo empírico para comparar a eficiência energética
 1.  **Python Puro:** Utilizando o módulo nativo `csv`.
 2.  **Biblioteca Pandas:** Uma biblioteca de alto desempenho para análise de dados.
 
-[cite_start]O objetivo é responder à pergunta: **A abordagem com Pandas é mais eficiente energeticamente do que a abordagem com Python puro?** 
+O objetivo é responder à pergunta: **A abordagem com Pandas é mais eficiente energeticamente do que a abordagem com Python puro?** 
 
 ### A Tarefa
 Ambas as implementações executaram uma tarefa idêntica para permitir uma comparação justa:
-* [cite_start]Ler um arquivo CSV de dados 
-* [cite_start]Armazenar os dados em memória 
-* [cite_start]Iterar sobre todos os registros 
-* [cite_start]Imprimir os registros no console 
+* Ler um arquivo CSV de dados 
+* Armazenar os dados em memória 
+* Iterar sobre todos os registros 
+* Imprimir os registros no console 
 
-[cite_start]A métrica principal é o **Consumo de Energia (em Joules)** [cite: 79, 81][cite_start], medido com a ferramenta `PyrAPL`[cite: 82].
+A métrica principal é o **Consumo de Energia (em Joules)** [cite: 79, 81], medido com a ferramenta `PyrAPL`[cite: 82].
 
 ### Documento de Definição
-[cite_start]A metodologia completa, incluindo as hipóteses formais (Nula e Alternativa) [cite: 64, 68][cite_start], as Perguntas de Pesquisa (RQs) [cite: 70] [cite_start]e o fluxo detalhado da execução [cite: 100-142], está detalhada no documento acadêmico abaixo:
+A metodologia completa, incluindo as hipóteses formais (Nula e Alternativa) [cite: 64, 68], as Perguntas de Pesquisa (RQs) [cite: 70] e o fluxo detalhado da execução [cite: 100-142], está detalhada no documento acadêmico abaixo:
 
 ➡️ **[Clique aqui para ler a Definição completa do Experimento (PDF)](./documentos/Definicao_do_experimento.pdf)**
 
@@ -197,11 +197,11 @@ A tendência observada no cenário de 100k se intensificou. Para a carga de 500k
 
 ##  निष्कर्षes Finais (Para o Documento e Apresentação)
 
-[cite_start]A análise empírica refuta a Hipótese Alternativa ($H_1$) [cite: 272] de que a biblioteca Pandas seria mais eficiente energeticamente para a tarefa definida. A **Implementação em Python Puro** (utilizando o módulo nativo `csv`) demonstrou ser consistentemente superior em todos os cenários de teste, tanto em termos de **Tempo de Execução (Desempenho)** quanto de **Consumo de Energia (Eficiência Verde)**.
+A análise empírica refuta a Hipótese Alternativa ($H_1$) [cite: 272] de que a biblioteca Pandas seria mais eficiente energeticamente para a tarefa definida. A **Implementação em Python Puro** (utilizando o módulo nativo `csv`) demonstrou ser consistentemente superior em todos os cenários de teste, tanto em termos de **Tempo de Execução (Desempenho)** quanto de **Consumo de Energia (Eficiência Verde)**.
 
 1.  **Eficiência Energética:** O Python Puro consumiu entre **$3$ a $4$ vezes menos energia** que a abordagem com Pandas para processar e iterar sobre o CSV.
 2.  **Desempenho:** O Python Puro também foi **$3$ a $4$ vezes mais rápido**.
-3.  [cite_start]**Implicação para Engenharia Verde:** A escolha de uma ferramenta com maior nível de abstração (Pandas) não resultou em ganhos de eficiência para a tarefa específica de **leitura, armazenamento e iteração simples**[cite: 228]. [cite_start]Pelo contrário, o _overhead_ introduzido pelo Pandas (devido à sua complexidade interna, otimizada para manipulações e não apenas para leitura) gerou um custo energético significativamente maior, reforçando a importância da seleção de ferramentas adequadas para **software verde**[cite: 233].
+3.  **Implicação para Engenharia Verde:** A escolha de uma ferramenta com maior nível de abstração (Pandas) não resultou em ganhos de eficiência para a tarefa específica de **leitura, armazenamento e iteração simples**[cite: 228]. Pelo contrário, o _overhead_ introduzido pelo Pandas (devido à sua complexidade interna, otimizada para manipulações e não apenas para leitura) gerou um custo energético significativamente maior, reforçando a importância da seleção de ferramentas adequadas para **software verde**[cite: 233].
 
 ---
 ### 👥 Autores
