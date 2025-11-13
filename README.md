@@ -1,6 +1,14 @@
 # Projeto_Engenharia_Verde
 Projeto acadêmico na UTFPR (Universidade Federal do Paraná) para medir e comparar o consumo de energia de algoritmos em Python (puro vs. Pandas), aplicando conceitos de Engenharia Verde.
 
+### 👥 Autores
+
+* **Caio Henrique dos Santos**
+* **Everton Cezar Gonçalves**
+* **João Pedro Guez de Oliveira**
+* **Marcio Marcos**
+* *Novembro de 2025*
+  
 ## 🔬 Metodologia e Definição do Experimento
 
 Este projeto realiza um estudo empírico para comparar a eficiência energética de duas abordagens populares de processamento de dados em Python:
@@ -9,7 +17,9 @@ Este projeto realiza um estudo empírico para comparar a eficiência energética
 2.  **Biblioteca Pandas:** Uma biblioteca de alto desempenho para análise de dados.
 
 O objetivo é responder à pergunta: **A abordagem com Pandas é mais eficiente energeticamente do que a abordagem com Python puro?** 
+---
 
+  
 ### A Tarefa
 Ambas as implementações executaram uma tarefa idêntica para permitir uma comparação justa:
 * Ler um arquivo CSV de dados 
@@ -202,5 +212,3 @@ A análise empírica refuta a Hipótese Alternativa ($H_1$) [cite: 272] de que a
 1.  **Eficiência Energética:** O Python Puro consumiu entre **$3$ a $4$ vezes menos energia** que a abordagem com Pandas para processar e iterar sobre o CSV.
 2.  **Desempenho:** O Python Puro também foi **$3$ a $4$ vezes mais rápido**.
 3.  **Implicação para Engenharia Verde:** A escolha de uma ferramenta com maior nível de abstração (Pandas) não resultou em ganhos de eficiência para a tarefa específica de **leitura, armazenamento e iteração simples**[cite: 228]. Pelo contrário, o _overhead_ introduzido pelo Pandas (devido à sua complexidade interna, otimizada para manipulações e não apenas para leitura) gerou um custo energético significativamente maior, reforçando a importância da seleção de ferramentas adequadas para **software verde**[cite: 233].
-
-
