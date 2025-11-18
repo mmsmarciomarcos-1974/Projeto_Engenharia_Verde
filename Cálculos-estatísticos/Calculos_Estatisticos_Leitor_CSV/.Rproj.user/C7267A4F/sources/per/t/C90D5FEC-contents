@@ -1,0 +1,303 @@
+# ==============================================================================
+# Projeto: Cálculo Estatisticos
+# Script: 04_analise_e_graficos.R
+# Descrição: Executa todos os scripts anteriores e gera gráficos
+#            comparativos (Boxplots, ICs, Densidades, ANOVA).
+#
+# Aluno: Everton Cezar Gonçalves
+# Disciplina: Software Verde (Green Software) - Mestrado UTFPR
+# Professor: Michel Albonico
+# ==============================================================================
+
+if (!requireNamespace("dplyr", quietly = TRUE)) {
+  install.packages("dplyr")
+}
+if (!requireNamespace("tidyr", quietly = TRUE)) {
+  install.packages("tidyr")
+}
+
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(car)
+
+tryCatch({
+  source("00_setup_e_dados.R")
+  print("Script '00_setup_e_dados.R' executado.")
+  source("01_medidas_de_posicao.R")
+  print("Script '01_medidas_de_posicao.R' executado.")
+  source("02_medidas_de_dispersao.R")
+  print("Script '02_medidas_de_dispersao.R' executado.")
+  source("03_tamanho_amostra_desvio_padrao_anova.R")
+  print("Script '03_tamanho_amostra_desvio_padrao_anova.R' executado.")
+  print("Todos os scripts anteriores (00-03) foram executados com sucesso.")
+}, error = function(e) {
+  stop(paste("Erro ao executar um dos scripts de setup (00-03):", e$message))
+})
+
+
+# --- Consolidação dos Dados para Gráficos ---
+
+cat("\nConsolidando dados para gráficos...\n")
+
+df_puro_10k <- data.frame(Energia = energia_J_10k, Tipo = "Puro", Carga = "10k")
+df_puro_100k <- data.frame(Energia = energia_J_100k, Tipo = "Puro", Carga = "100k")
+df_puro_500k <- data.frame(Energia = energia_J_500k, Tipo = "Puro", Carga = "500k")
+
+df_pandas_10k <- data.frame(Energia = energia_J_10k_pandas, Tipo = "Pandas", Carga = "10k")
+df_pandas_100k <- data.frame(Energia = energia_J_100k_pandas, Tipo = "Pandas", Carga = "100k")
+df_pandas_500k <- data.frame(Energia = energia_J_500k_pandas, Tipo = "Pandas", Carga = "500k")
+
+
+df_completo <- bind_rows(
+  df_puro_10k, df_puro_100k, df_puro_500k,
+  df_pandas_10k, df_pandas_100k, df_pandas_500k
+)
+
+df_completo <- df_completo %>%
+  na.omit() %>%
+  mutate(
+    # Definir a ordem correta para Carga e Tipo
+    Carga = factor(Carga, levels = c("10k", "100k", "500k")),
+    Tipo = factor(Tipo, levels = c("Puro", "Pandas")),
+    # Criar uma coluna de interação para facilitar alguns gráficos
+    Grupo = interaction(Tipo, Carga, sep = " ", lex.order = TRUE)
+  )
+
+cat("Dataframe consolidado 'df_completo' criado com sucesso.\n")
+
+
+# --- Verificação do Diretório de Gráficos ---
+
+dir_graficos <- "graficos"
+if (!dir.exists(dir_graficos)) {
+  dir.create(dir_graficos)
+  cat(sprintf("Diretório '%s' criado com sucesso.\n", dir_graficos))
+} else {
+  cat(sprintf("Diretório '%s' já existe. Salvando gráficos...\n", dir_graficos))
+}
+
+
+# --- Gráfico 1: Boxplot Comparativo (Todos os 6 grupos) com Rótulos ---
+cat("Gerando Gráfico 1: Boxplot Comparativo com Rótulos...\n")
+
+# Calcular as estatísticas necessárias para os rótulos do boxplot
+boxplot_stats <- df_completo %>%
+  group_by(Tipo, Carga) %>%
+  summarise(
+    Median = median(Energia, na.rm = TRUE),
+    Q1 = quantile(Energia, 0.25, na.rm = TRUE),
+    Q3 = quantile(Energia, 0.75, na.rm = TRUE),
+    Min = min(Energia, na.rm = TRUE),
+    Max = max(Energia, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+g_boxplot <- ggplot(df_completo, aes(x = Tipo, y = Energia, fill = Tipo)) +
+  geom_boxplot(outlier.alpha = 0.3) + 
+  # Adicionar rótulos para a mediana
+  geom_text(data = boxplot_stats, aes(x = Tipo, y = Median, label = sprintf("Med: %.2f J", Median)), 
+            vjust = -0.5, size = 3.5, color = "black") +
+  facet_wrap(~ Carga, scales = "free_y") + 
+  labs(
+    title = "Comparação de Consumo de Energia (Boxplot com Medianas)",
+    subtitle = "Python Puro vs. Python com Pandas (em escalas separadas por Carga)",
+    y = "Energia (Joules)",
+    x = "Implementação"
+  ) +
+  scale_fill_manual(values = c("Puro" = "cyan", "Pandas" = "orange")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none", strip.text = element_text(face = "bold", size = 12)) +
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.15)))
+
+ggsave(file.path(dir_graficos, "04_grafico_boxplot_comparativo_com_rotulos.png"), g_boxplot, width = 11, height = 7)
+cat(sprintf("Gráfico salvo em: '%s/04_grafico_boxplot_comparativo_com_rotulos.png'\n", dir_graficos))
+
+
+# --- Gráfico 2: Médias com Intervalo de Confiança 99% (Facetado) com Rótulos ---
+cat("Gerando Gráfico 2: Médias com IC 99% (Facetado) com Rótulos...\n")
+
+# 1. Calcular as estatísticas (Média e IC de 99%)
+nivel_confianca <- 0.99
+alpha <- 1 - nivel_confianca
+
+df_summary_ic99 <- df_completo %>%
+  group_by(Tipo, Carga) %>%
+  summarise(
+    N = n(),
+    Media = mean(Energia),
+    SD = sd(Energia),
+    ErroPadrao = SD / sqrt(N),
+    t_critico = qt(1 - (alpha / 2), df = N - 1),
+    MargemErro = t_critico * ErroPadrao,
+    IC_Inferior = Media - MargemErro,
+    IC_Superior = Media + MargemErro,
+    .groups = 'drop'
+  )
+
+# 2. Gerar o gráfico
+g_ic99_facetado <- ggplot(df_summary_ic99, aes(x = Tipo, y = Media, color = Tipo)) +
+  geom_point(size = 4) +
+  geom_errorbar(
+    aes(ymin = IC_Inferior, ymax = IC_Superior),
+    width = 0.2,
+    linewidth = 1
+  ) +
+  geom_text(
+    aes(y = IC_Superior, label = sprintf("%.2f J", Media)), 
+    vjust = -0.7, 
+    size = 3.5, 
+    color = "black"
+  ) +
+  facet_wrap(~ Carga, scales = "free_y") + 
+  labs(
+    title = "Média de Consumo de Energia (com IC 99%) - Gráfico Facetado com Rótulos",
+    subtitle = "Python Puro vs. Python com Pandas (em escalas separadas por Carga)",
+    y = "Energia Média (Joules)",
+    x = "Implementação"
+  ) +
+  scale_color_manual(values = c("Puro" = "blue", "Pandas" = "red")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none", strip.text = element_text(face = "bold", size = 12)) +
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.15)))
+
+ggsave(file.path(dir_graficos, "04_grafico_medias_ic99_facetado_com_rotulos.png"), g_ic99_facetado, width = 11, height = 7)
+cat(sprintf("Gráfico salvo em: '%s/04_grafico_medias_ic99_facetado_com_rotulos.png'\n", dir_graficos))
+
+
+# --- Gráfico 3: Comparação dos Resultados da ANOVA ---
+cat("Gerando Gráfico 3: Resultados da ANOVA...\n")
+
+# 1. ANOVA para Python Puro
+stacked_data_puro <- df_completo %>% filter(Tipo == "Puro")
+anova_puro <- aov(Energia ~ Carga, data = stacked_data_puro)
+f_puro <- summary(anova_puro)[[1]]$`F value`[1]
+
+# 2. ANOVA para Python com Pandas
+stacked_data_pandas <- df_completo %>% filter(Tipo == "Pandas")
+anova_pandas <- aov(Energia ~ Carga, data = stacked_data_pandas)
+f_pandas <- summary(anova_pandas)[[1]]$`F value`[1]
+
+# 3. Criar dataframe para o gráfico
+df_anova_results <- data.frame(
+  Implementacao = c("Python Puro", "Python com Pandas"),
+  Estatistica_F = c(f_puro, f_pandas)
+)
+
+# 4. Gerar o gráfico
+g_anova_f <- ggplot(df_anova_results, aes(x = Implementacao, y = Estatistica_F, fill = Implementacao)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  geom_text(aes(label = sprintf("F = %.0f", Estatistica_F)), vjust = -0.5, size = 5) +
+  labs(
+    title = "Comparação da Estatística F da ANOVA",
+    subtitle = "Teste (Energia ~ Carga) para cada implementação",
+    y = "Valor da Estatística F (Quanto maior, maior a diferença entre cargas)",
+    x = NULL
+  ) +
+  scale_fill_manual(values = c("Python Puro" = "cyan", "Pandas" = "orange")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+
+ggsave(file.path(dir_graficos, "04_grafico_anova_comparacao.png"), g_anova_f, width = 8, height = 6)
+cat(sprintf("Gráfico salvo em: '%s/04_grafico_anova_comparacao.png'\n", dir_graficos))
+
+
+# --- Gráfico 4: Comparação de Densidades ---
+cat("Gerando Gráfico 4: Gráfico de Densidade com Rótulos de Média...\n")
+
+g_densidade <- ggplot(df_completo, aes(x = Energia, fill = Tipo, color = Tipo)) +
+  geom_density(alpha = 0.5) +
+  geom_point(data = df_summary_ic99, aes(x = Media, y = 0), shape = 18, size = 3, show.legend = FALSE) +
+  geom_text(data = df_summary_ic99, aes(x = Media, y = 0, label = sprintf("Média: %.2f J", Media)), 
+            vjust = -0.7, hjust = 0.5, size = 3.5, color = "black", angle = 45) +
+  facet_wrap(~ Carga, scales = "free") + 
+  labs(
+    title = "Comparação da Distribuição de Energia (Densidade com Médias)",
+    subtitle = "Python Puro vs. Python com Pandas (em escalas separadas por Carga)",
+    y = "Densidade",
+    x = "Energia (Joules)"
+  ) +
+  scale_fill_manual(values = c("Puro" = "cyan", "Pandas" = "orange")) +
+  scale_color_manual(values = c("Puro" = "blue", "Pandas" = "red")) +
+  theme_minimal(base_size = 14) +
+  theme(strip.text = element_text(face = "bold", size = 12)) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.2)))
+
+ggsave(file.path(dir_graficos, "04_grafico_densidade_comparativo_com_rotulos.png"), g_densidade, width = 12, height = 7)
+cat(sprintf("Gráfico salvo em: '%s/04_grafico_densidade_comparativo_com_rotulos.png'\n", dir_graficos))
+
+
+# --- Gráfico 5: Médias em Gráfico Único (Eixo Logarítmico) com Rótulos ---
+cat("Gerando Gráfico 5: Médias em Gráfico Único (Eixo Logarítmico) com Rótulos...\n")
+
+g_ic99_unificado_log <- ggplot(df_summary_ic99, 
+                               aes(x = Carga, y = Media, color = Tipo)) +
+  geom_point(aes(shape = Tipo), size = 4, position = position_dodge(width = 0.5)) +
+  geom_errorbar(
+    aes(ymin = IC_Inferior, ymax = IC_Superior),
+    width = 0.3,
+    linewidth = 1,
+    position = position_dodge(width = 0.5)
+  ) +
+  geom_text(
+    aes(y = IC_Superior, label = sprintf("%.2f J", Media)), 
+    vjust = -0.7, 
+    size = 3.5, 
+    color = "black",
+    position = position_dodge(width = 0.5)
+  ) +
+  scale_y_log10(breaks = c(1, 2, 5, 10, 25, 50, 100, 200, 400, 700)) + # Ajustado breaks para acomodar valores maiores
+  labs(
+    title = "Média de Consumo de Energia (com IC 99%) - Gráfico Único com Rótulos",
+    subtitle = "Comparação entre Cargas e Implementações (Eixo Y Logarítmico)",
+    y = "Energia Média (Joules) - Escala Log",
+    x = "Carga de Dados",
+    color = "Implementação",
+    shape = "Implementação"
+  ) +
+  scale_color_manual(values = c("Puro" = "blue", "Pandas" = "red")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom")
+
+ggsave(file.path(dir_graficos, "04_grafico_medias_ic99_unificado_log_com_rotulos.png"), g_ic99_unificado_log, width = 11, height = 7)
+cat(sprintf("Gráfico salvo em: '%s/04_grafico_medias_ic99_unificado_log_com_rotulos.png'\n", dir_graficos))
+
+
+# --- Gráfico 6: Médias em Gráfico Único (Eixo Linear) com Rótulos ---
+cat("Gerando Gráfico 6: Médias em Gráfico Único (Eixo Linear) com Rótulos...\n")
+
+g_ic99_unificado_linear <- ggplot(df_summary_ic99, 
+                                  aes(x = Carga, y = Media, color = Tipo)) +
+  geom_point(aes(shape = Tipo), size = 4, position = position_dodge(width = 0.5)) +
+  geom_errorbar(
+    aes(ymin = IC_Inferior, ymax = IC_Superior),
+    width = 0.3,
+    linewidth = 1,
+    position = position_dodge(width = 0.5)
+  ) +
+  geom_text(
+    aes(y = IC_Superior, label = sprintf("%.2f J", Media)), 
+    vjust = -0.7, 
+    size = 3.5, 
+    color = "black",
+    position = position_dodge(width = 0.5)
+  ) +
+  labs(
+    title = "Média de Consumo de Energia (com IC 99%) - Gráfico Único com Rótulos",
+    subtitle = "Comparação entre Cargas e Implementações (Eixo Y Linear)",
+    y = "Energia Média (Joules)",
+    x = "Carga de Dados",
+    color = "Implementação",
+    shape = "Implementação"
+  ) +
+  scale_color_manual(values = c("Puro" = "blue", "Pandas" = "red")) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "bottom") +
+  scale_y_continuous(expand = expansion(mult = c(0.05, 0.15)))
+
+ggsave(file.path(dir_graficos, "04_grafico_medias_ic99_unificado_linear_com_rotulos.png"), g_ic99_unificado_linear, width = 11, height = 7)
+cat(sprintf("Gráfico salvo em: '%s/04_grafico_medias_ic99_unificado_linear_com_rotulos.png'\n", dir_graficos))
+
+
+cat(sprintf("\n--- Análise Gráfica (04) Concluída ---"))
+cat(sprintf("\nVerifique o diretório '%s' pelos 6 arquivos .png gerados.\n", dir_graficos))
